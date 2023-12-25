@@ -8,7 +8,7 @@ export default function Home() {
   const [files, setFiles] = useState<FileList>();
   const [metadata, setMetadata] = useState<{ fileName: string, fileSize: number }>();
   useEffect(() => {
-    const _socket = io('http://localhost:3000');
+    const _socket = io(window.location.origin);
     setSocket(_socket);
     const _peerConnection = new RTCPeerConnection();
     setPeerConnection(_peerConnection);
