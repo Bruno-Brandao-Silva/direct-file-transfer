@@ -1,0 +1,33 @@
+.fileInputLabel {
+  display: block;
+  position: relative;
+  background-color: lightgray;
+  width: fit-content;
+  height: fit-content;
+  padding: 1rem;
+  border-radius: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+  user-select: none;
+}
+.fileInputLabel:hover {
+  background-color: gray;
+}
+.fileInputText {
+  width: fit-content;
+  margin: auto;
+  font-size: 1.5rem;
+  font-weight: 600;
+  font-family: 'Times New Roman', Times, serif;
+}
+
+.fileInput {
+  display: none;
+}
+
+.fileIcon {
+  display: block;
+  width: 100px;
+  margin: auto;
+  -webkit-user-drag: none;
+}

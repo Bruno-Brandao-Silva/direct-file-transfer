@@ -1,0 +1,14 @@
+/* CSS Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Times New Roman', Times, serif;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: linear-gradient(to right, #0f2027, #203a43, #203a43, #0f2027);
+  width: 100vw;
+  height: 100vh;
+}

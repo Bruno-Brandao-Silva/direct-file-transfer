@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import io, { Socket } from 'socket.io-client';
+import FileInput from '@/components/FileInput';
 
 export default function Home() {
-  const connectedUsers = ['User1', 'User2', 'User3'];
   const [socket, setSocket] = useState<Socket>();
   const [peerConnection, setPeerConnection] = useState<RTCPeerConnection>();
+  const [sentFiles, setSentFiles] = useState(0);
   const [files, setFiles] = useState<FileList>();
-  const [metadata, setMetadata] = useState<{ fileName: string, fileSize: number }>();
   useEffect(() => {
     const _socket = io(window.location.origin, { transports: ['websocket'] });
     setSocket(_socket);
@@ -29,6 +29,7 @@ export default function Home() {
       console.log('offer', offer);
       await peerConnection.setRemoteDescription(offer);
       const answer = await peerConnection.createAnswer();
+      console.log('answer', answer);
       await peerConnection.setLocalDescription(answer);
       socket.emit('answer', answer);
     });
@@ -39,10 +40,6 @@ export default function Home() {
     socket.on('iceCandidate', async (iceCandidate) => {
       console.log('iceCandidate', iceCandidate);
       await peerConnection.addIceCandidate(iceCandidate);
-    });
-    socket.on('file', async (fileName, fileSize) => {
-      console.log('file', fileName, fileSize);
-      setMetadata({ fileName, fileSize });
     });
     peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
@@ -77,7 +74,6 @@ export default function Home() {
               link.click();
               receiveBuffer = [];
               receivedSize = 0;
-              setMetadata(null);
             }
             break;
         }
@@ -98,8 +94,7 @@ export default function Home() {
     };
   }, [peerConnection, socket]);
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmit = async () => {
     // Handle file submission logic here
     console.log(peerConnection);
     if (!peerConnection) return;
@@ -112,7 +107,7 @@ export default function Home() {
           console.log(files[i]);
           dataChannel.send(JSON.stringify({ fileName: files[i].name, fileSize: files[i].size }));
           await new Promise<void>((resolve, reject) => {
-            const chunkSize = 16384 /2;
+            const chunkSize = 16384 / 2;
             const fileReader = new FileReader();
             let offset = 0;
 
@@ -122,9 +117,11 @@ export default function Home() {
               const result = e.target.result as ArrayBuffer;
               dataChannel.send(result);
               offset += result.byteLength;
+              progressHandler(offset, i);
               if (offset < files[i].size) {
                 readSlice(offset);
               } else {
+                setSentFiles(sentFiles + 1);
                 resolve();
               }
             });
@@ -150,20 +147,65 @@ export default function Home() {
       socket.emit('offer', offer);
     });
   };
-
+  const fileSizeHandler = (fileSize: number) => {
+    if (fileSize < 1024) return fileSize + ' bytes';
+    else if (fileSize < 1024 * 1024) return (fileSize / 1024).toFixed(2) + ' KB';
+    else if (fileSize < 1024 * 1024 * 1024) return (fileSize / 1024 / 1024).toFixed(2) + ' MB';
+    else return (fileSize / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+  }
+  const progressHandler = (progress: number, index: number) => {
+    const progressBar = document.getElementById(`progress#${index}`) as HTMLProgressElement;
+    progressBar.value = progress;
+  };
   return (
     <div>
-      <h1>Connected Users</h1>
-      <ul>
+      <h1>Direct File Transfer</h1>
+      {/* <ul>
         {connectedUsers.map((user, index) => (
           <li key={index}>{user}</li>
         ))}
-      </ul>
+      </ul> */}
 
-      <form onSubmit={handleSubmit}>
+      <div>
         <input type="file" multiple onChange={e => setFiles(e.target.files)} />
-        <button type="submit">Send Files</button>
-      </form>
+        <button type="button" onClick={handleSubmit}>Send Files</button>
+        <p>Files:  {sentFiles}/{files?.length || 0}</p>
+        {files && (
+          <table>
+            <tbody>
+              {Array.from(files).map((file, index) => (
+                <tr key={index}>
+                  <td>{file.name}</td>
+                  <td>{fileSizeHandler(file.size)}</td>
+                  <td><progress id={`progress#${index}`} max={file.size} value={0} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <FileInput onChange={e => {
+
+          function concatenateFileLists(fileList1: FileList, fileList2: FileList) {
+            const combinedFiles = Array.from(fileList1).concat(Array.from(fileList2));
+
+            const combinedFileList = new DataTransfer();
+
+            combinedFiles.forEach(file => {
+              combinedFileList.items.add(file);
+            });
+
+            return combinedFileList.files;
+          }
+          
+          if (files) {
+            if (e) {
+              setFiles(concatenateFileLists(files, e));
+            }
+          } else {
+            setFiles(e);
+          }
+        }} />
+      </div>
     </div>
   );
 }
