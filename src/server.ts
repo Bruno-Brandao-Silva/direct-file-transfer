@@ -39,21 +39,26 @@ app.prepare().then(() => {
       socket.username = name;
       socket.roomId = roomId;
       socket.join(roomId);
-      socket.emit('room-created', roomId);
+      socket.emit('create-room-anwser', roomId);
       io.to(roomId).emit('joined', `${name} entrou na sala.`);
     });
 
-
-
     socket.on('join-room', (roomId, name) => {
+      console.log('User joined room:', roomId, name)
       socket.username = name;
-      if(socket.roomId) {
+      if (socket.roomId) {
         socket.leave(socket.roomId);
         io.to(socket.roomId).emit('exited', `${socket.username} saiu da sala.`);
       }
+      if (
+        !idSet.has(roomId)
+      ) {
+        socket.emit('join-room-awnser', null);
+        return;
+      }
       socket.roomId = roomId;
       socket.join(roomId);
-      socket.emit('joined', `${name} entrou na sala.`);
+      socket.emit('join-room-awnser', roomId);
     });
 
     socket.on('disconnect', () => {
@@ -75,26 +80,26 @@ app.prepare().then(() => {
       // Handle incoming offer
       console.log('Received offer:', offer)
       // Process the offer and send an answer
-      socket.broadcast.emit('offer', offer);
+      io.to(socket.roomId).emit('offer', offer, socket.username);
     });
 
     socket.on('answer', (answer) => {
       // Handle incoming answer
       console.log('Received answer:', answer)
       // Process the answer
-      socket.broadcast.emit('answer', answer);
+      io.to(socket.roomId).emit('answer', answer, socket.username);
     });
 
     socket.on('iceCandidate', (iceCandidate) => {
       // Handle incoming ICE candidate
       console.log('Received ICE candidate:', iceCandidate)
       // Add the ICE candidate to the peer connection
-      socket.broadcast.emit('iceCandidate', iceCandidate);
+      io.to(socket.roomId).emit('iceCandidate', iceCandidate, socket.username);
     });
 
     socket.on('file', (name, size) => {
       console.log('Received file:', name, size)
-      socket.broadcast.emit('file', name, size);
+      io.to(socket.roomId).emit('file', name, size, socket.username);
     });
 
   });

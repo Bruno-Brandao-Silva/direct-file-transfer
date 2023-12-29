@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
-import io, { Socket } from 'socket.io-client';
 import FileInput from '@/components/FileInput';
+import { useSocketIO } from '@/context/SocketIOContext';
 
 export default function Home() {
-  const [socket, setSocket] = useState<Socket>();
+  const { socket } = useSocketIO();
+
   const [peerConnection, setPeerConnection] = useState<RTCPeerConnection>();
   const [sentFiles, setSentFiles] = useState(0);
   const [files, setFiles] = useState<FileList>();
+  console.log(socket);
   useEffect(() => {
-    const _socket = io(window.location.origin, { transports: ['websocket'] });
-    setSocket(_socket);
     const _peerConnection = new RTCPeerConnection();
     setPeerConnection(_peerConnection);
   }, []);
@@ -25,20 +25,23 @@ export default function Home() {
     socket.on('disconnect', () => {
       console.log('disconnected');
     });
-    socket.on('offer', async (offer) => {
-      console.log('offer', offer);
+    socket.on('offer', async (offer, username) => {
+      if (username === socket.username) return;
+      console.log('offer', offer, username);
       await peerConnection.setRemoteDescription(offer);
       const answer = await peerConnection.createAnswer();
       console.log('answer', answer);
       await peerConnection.setLocalDescription(answer);
       socket.emit('answer', answer);
     });
-    socket.on('answer', async (answer) => {
-      console.log('answer', answer);
+    socket.on('answer', async (answer, username) => {
+      if (username === socket.username) return;
+      console.log('answer', answer, username);
       await peerConnection.setRemoteDescription(answer);
     });
-    socket.on('iceCandidate', async (iceCandidate) => {
-      console.log('iceCandidate', iceCandidate);
+    socket.on('iceCandidate', async (iceCandidate, username) => {
+      if (username === socket.username) return;
+      console.log('iceCandidate', iceCandidate, username);
       await peerConnection.addIceCandidate(iceCandidate);
     });
     peerConnection.onicecandidate = (event) => {
@@ -196,7 +199,7 @@ export default function Home() {
 
             return combinedFileList.files;
           }
-          
+
           if (files) {
             if (e) {
               setFiles(concatenateFileLists(files, e));
@@ -205,6 +208,7 @@ export default function Home() {
             setFiles(e);
           }
         }} />
+        {socket?.roomId && <a href={`${window.location.origin}/invite?code=${socket.roomId}`} target='_blank'>{`${window.location.origin}/invite?code=${socket.roomId}`}</a>}
       </div>
     </div>
   );
