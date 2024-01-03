@@ -10,3 +10,8 @@ export interface CustomSocketClient extends SocketClient {
     username?: string;
     roomId?: string;
 }
+
+export interface User {
+    username: string;
+    socketId: string;
+}

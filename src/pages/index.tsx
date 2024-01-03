@@ -1,5 +1,5 @@
 import { FC, useState } from 'react';
-import styles from '@/styles/Home.module.css';
+import styles from '@/styles/Index.module.css';
 import Image from 'next/image';
 import { useSocketIO } from '@/context/SocketIOContext';
 import { io } from 'socket.io-client';

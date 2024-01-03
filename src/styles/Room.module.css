@@ -1,0 +1,64 @@
+.main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 2rem;
+}
+
+.roomInfo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 60%;
+    height: 100%;
+}
+
+.roomInfo h1 {
+    font-family: 'Poppins', sans-serif;
+    font-size: 1.5rem;
+    color: #ddd;
+}
+
+.content {
+    display: flex;
+    gap: 5rem;
+    margin-top: 1rem;
+}
+
+.sendDiv {
+    height: 100%;
+    min-height: 35rem;
+    min-width: 30rem;
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.sendDiv td {
+    padding: 0.2rem 0.5rem;
+    color: #ddd;
+}
+
+.sendDiv table {
+    min-width: 100%;
+    background-color: rgba(0, 0, 0, 0.2);
+}
+.tableContainer{
+    height: 20rem;
+    overflow-y: scroll;
+
+}
+.sendDiv thead {
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.usersDiv {
+    min-width: 15rem;
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.receiveDiv {
+    min-width: 30rem;
+    background-color: rgba(0, 0, 0, 0.2);
+}

@@ -1,15 +1,36 @@
 import { useEffect, useState } from 'react';
 import FileInput from '@/components/FileInput';
 import { useSocketIO } from '@/context/SocketIOContext';
+import styles from '@/styles/Room.module.css';
+import { User } from '@/types';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
   const { socket } = useSocketIO();
+  const router = useRouter();
 
   const [peerConnection, setPeerConnection] = useState<RTCPeerConnection>();
   const [sentFiles, setSentFiles] = useState(0);
   const [files, setFiles] = useState<FileList>();
-  console.log(socket);
+  const [users, setUsers] = useState<User[]>([
+    {
+      username: 'user1',
+      socketId: 'socketId1'
+    },
+    {
+      username: 'user2',
+      socketId: 'socketId2'
+    },
+    {
+      username: 'user3',
+      socketId: 'socketId3'
+    }
+  ]);
   useEffect(() => {
+    if (!socket) router.push('/');
+    const config: RTCConfiguration = {
+      iceTransportPolicy: 'relay',
+    };
     const _peerConnection = new RTCPeerConnection();
     setPeerConnection(_peerConnection);
   }, []);
@@ -108,8 +129,8 @@ export default function Home() {
       if (files) {
         for (let i = 0; i < files.length; i++) {
           console.log(files[i]);
-          dataChannel.send(JSON.stringify({ fileName: files[i].name, fileSize: files[i].size }));
           await new Promise<void>((resolve, reject) => {
+            dataChannel.send(JSON.stringify({ fileName: files[i].name, fileSize: files[i].size }));
             const chunkSize = 16384 / 2;
             const fileReader = new FileReader();
             let offset = 0;
@@ -160,56 +181,113 @@ export default function Home() {
     const progressBar = document.getElementById(`progress#${index}`) as HTMLProgressElement;
     progressBar.value = progress;
   };
+  function concatenateFileLists(fileList1: FileList, fileList2: FileList) {
+    const combinedFiles = Array.from(fileList1).concat(Array.from(fileList2));
+
+    const combinedFileList = new DataTransfer();
+
+    combinedFiles.forEach(file => {
+      combinedFileList.items.add(file);
+    });
+
+    return combinedFileList.files;
+  }
+  const inputFileHanlder = (e: FileList | null) => {
+    if (files) {
+      if (e) {
+        setFiles(concatenateFileLists(files, e));
+      }
+    } else {
+      setFiles(e);
+    }
+  }
+  const removeFileHandler = (index: number) => {
+    if (files) {
+      const newFiles = Array.from(files);
+      newFiles.splice(index, 1);
+      const combinedFileList = new DataTransfer();
+      newFiles.forEach(file => {
+        combinedFileList.items.add(file);
+      });
+      setFiles(combinedFileList.files);
+    }
+  }
+  const copyLinkHandler = () => {
+    try {
+      socket.roomId && navigator.clipboard.writeText(`${window.location.origin}/invite?code=${socket.roomId}`);
+    } catch (err) {
+      console.error(err);
+    }
+  };
   return (
-    <div>
-      <h1>Direct File Transfer</h1>
-      {/* <ul>
-        {connectedUsers.map((user, index) => (
-          <li key={index}>{user}</li>
-        ))}
-      </ul> */}
-
-      <div>
-        <input type="file" multiple onChange={e => setFiles(e.target.files)} />
-        <button type="button" onClick={handleSubmit}>Send Files</button>
-        <p>Files:  {sentFiles}/{files?.length || 0}</p>
-        {files && (
-          <table>
-            <tbody>
-              {Array.from(files).map((file, index) => (
-                <tr key={index}>
-                  <td>{file.name}</td>
-                  <td>{fileSizeHandler(file.size)}</td>
-                  <td><progress id={`progress#${index}`} max={file.size} value={0} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-        <FileInput onChange={e => {
-
-          function concatenateFileLists(fileList1: FileList, fileList2: FileList) {
-            const combinedFiles = Array.from(fileList1).concat(Array.from(fileList2));
-
-            const combinedFileList = new DataTransfer();
-
-            combinedFiles.forEach(file => {
-              combinedFileList.items.add(file);
-            });
-
-            return combinedFileList.files;
-          }
-
-          if (files) {
-            if (e) {
-              setFiles(concatenateFileLists(files, e));
-            }
-          } else {
-            setFiles(e);
-          }
-        }} />
-        {socket?.roomId && <a href={`${window.location.origin}/invite?code=${socket.roomId}`} target='_blank'>{`${window.location.origin}/invite?code=${socket.roomId}`}</a>}
-      </div>
-    </div>
+    <main className={styles.main}>
+      <section className={styles.roomInfo}>
+        <div>
+          <h1>{`Username: ${socket?.username}`}</h1>
+        </div>
+        <div onClick={copyLinkHandler}>
+          <h1>{`Room code: ${socket?.roomId}`}</h1>
+        </div>
+      </section>
+      <section className={styles.content}>
+        <div className={styles.sendDiv}>
+          <div className={styles.tableContainer}>
+            <table>
+              <thead>
+                <td>Name</td>
+                <td>Size</td>
+                <td>Progress</td>
+                <td></td>
+              </thead>
+              <tbody>
+                {files &&
+                  Array.from(files).map((file, index) => (
+                    <tr key={index}>
+                      <td>{file.name}</td>
+                      <td>{fileSizeHandler(file.size)}</td>
+                      <td><progress id={`progress#${index}`} max={file.size} value={0} /></td>
+                      <td onClick={() => removeFileHandler(index)}>X</td>
+                    </tr>
+                  ))
+                }
+              </tbody>
+            </table>
+          </div>
+          <p>Files:  {sentFiles}/{files?.length || 0}</p>
+          <FileInput onChange={inputFileHanlder} multiple={true} />
+          <button type="button" onClick={handleSubmit}>Send Files</button>
+        </div>
+        <div className={styles.usersDiv}>
+          <h1>Users</h1>
+          <ul>
+            {users.map((user, index) => (
+              <li key={index}>{user.username}</li>
+            ))}
+          </ul>
+        </div>
+        <div className={styles.receiveDiv}>
+          {/* {files && (
+            <table>
+              <thead>
+                <td>Name</td>
+                <td>Size</td>
+                <td>Progress</td>
+                <td>Remove</td>
+              </thead>
+              <tbody>
+                {Array.from(files).map((file, index) => (
+                  <tr key={index}>
+                    <td>{file.name}</td>
+                    <td>{fileSizeHandler(file.size)}</td>
+                    <td><progress id={`progress#${index}`} max={file.size} value={0} /></td>
+                    <td onClick={() => removeFileHandler(index)}>X</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )} */}
+        </div>
+      </section>
+    </main>
   );
 }
